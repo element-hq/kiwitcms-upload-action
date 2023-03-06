@@ -1,0 +1,62 @@
+name: 'Upload to Kiwi'
+description: 'Upload test results to kiwi tcms instance'
+inputs:
+  file-pattern:
+    description: "junit xml files to upload. bash-compatible globbing only.eg (./output/results/junit*.xml)"
+    required: true
+  summary-template:
+    description: "Template to change testsuite/testcases into summary for new test cases. Use $suitename, $name, $classname to refer to features of the junit xml."
+    required: false
+    default: "$name"
+  product:
+    description: "Product Name (eg 'Element Web'). Should match products in kiwi."
+    required: true
+  product-version:
+    description: "Product Version (eg 'develop', 'main'). Should not be high cardinality"
+    required: true
+  build-id:
+    description: "Identifier for build, eg ( github.sha, or tag '1.42-rc1', '1.41' )"
+    required: true
+  suite-name:
+    description: "Test plan name (eg 'cypress end to end')"
+    required: true
+  verbose:
+    description: "Verbose logging from various tools"
+    default: false
+  kiwi-username:
+    description: "(Secret) Kiwi Username for access"
+    required: true
+  kiwi-password:
+    description: "(Secret) Kiwi Password for access"
+    required: true
+  kiwi-url:
+    description: "Kiwi API endpoint"
+    required: false
+    default: 'https://element.tenant.kiwitcms.org/xml-rpc/'
+outputs: {}
+runs:
+  using: composite
+  steps:
+    - name: Install python
+      uses: actions/setup-python@v4
+    - name: Install script and configure
+      run: |
+         pip install git+https://github.com/michaelkaye/junit.xml-plugin@michaelk/allow_commandline_template
+         cat > ~/.tcms.conf << _EOF
+         [tcms]
+         url = ${{ inputs.kiwi-url }}
+         username = ${{ inputs.kiwi-username }}
+         password = ${{ inputs.kiwi-password }}
+         _EOF
+      shell: bash
+    - name: Run updater
+      run: tcms-junit.xml-plugin $([ "${{ inputs.verbose }}" == "true" ] && echo "-v") --summary-template '${{ inputs.summary-template }}' ${{ inputs.file-pattern }}
+      shell: bash
+      env:
+        TCMS_PREFIX: ${{ inputs.suite-name }}
+#        TCMS_PLAN_ID - if defined will create test runs under this TestPlan
+#        TCMS_PARENT_PLAN - if defined newly created TestPlan will be a child of this one
+#        TCMS_RUN_ID - if defined will report results to this TestRun
+        TCMS_PRODUCT: ${{ inputs.product }}
+        TCMS_PRODUCT_VERSION: ${{ inputs.product-version }}
+        TCMS_BUILD: ${{ inputs.build-id }}
