@@ -41,7 +41,7 @@ runs:
       uses: actions/setup-python@v4
     - name: Install script and configure
       run: |
-         pip install git+https://github.com/michaelkaye/junit.xml-plugin@michaelk/allow_commandline_template
+         pip install git+https://github.com/kiwitcms/junit.xml-plugin@v12.0
          cat > ~/.tcms.conf << _EOF
          [tcms]
          url = ${{ inputs.kiwi-url }}
